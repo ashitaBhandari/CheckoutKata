@@ -20,20 +20,16 @@ namespace CheckoutKata
             {
                 if (!string.IsNullOrEmpty(item))
                 {
-                    if(_pricingRules.ContainsKey(item))
+                    if(item.Length > 1)
                     {
-                        if (_items.ContainsKey(item))
+                        foreach(char itemChar in item)
                         {
-                            _items[item]++;
-                        }
-                        else
-                        {
-                            _items[item] = 1;
+                            InsertDataIntoDictionary(itemChar.ToString());
                         }
                     }
-                    else
+                    else if(item.Length == 1)
                     {
-                        throw new KeyNotFoundException($"Item SKU '{item}' not found in pricing rules.");
+                        InsertDataIntoDictionary(item);
                     }
                 }
                 else
@@ -49,9 +45,55 @@ namespace CheckoutKata
 
      
         }
+
+        private void InsertDataIntoDictionary(string item)
+        {
+            if (_pricingRules.ContainsKey(item))
+            {
+                if (_items.ContainsKey(item))
+                {
+                    _items[item]++;
+                }
+                else
+                {
+                    _items[item] = 1;
+                }
+            }
+            else
+            {
+                throw new KeyNotFoundException($"Item SKU '{item}' not found in pricing rules.");
+            }
+        }
         public int GetTotalPrice()
         {
-            return 100;
+            try
+            {
+                int totalPrice = 0;
+
+                foreach (var item in _items)
+                {
+                    var pricingRule = _pricingRules[item.Key];
+                    int itemCount = item.Value;
+
+                    if (pricingRule.SpecialQuantity.HasValue && pricingRule.SpecialPrice.HasValue)
+                    {
+                        int specialCount = itemCount / pricingRule.SpecialQuantity.Value;
+                        int regularCount = itemCount % pricingRule.SpecialQuantity.Value;
+                        totalPrice += specialCount * pricingRule.SpecialPrice.Value + regularCount * pricingRule.UnitPrice;
+                    }
+                    else
+                    {
+                        totalPrice += itemCount * pricingRule.UnitPrice;
+                    }
+                }
+
+                return totalPrice;
+            }
+            catch (Exception ex)
+            {
+                // Log or handle exception as needed
+                throw new InvalidOperationException("Failed to calculate total price.", ex);
+            }
         }
     }
 }
