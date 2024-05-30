@@ -1,4 +1,5 @@
 using CheckoutKata.Interfaces;
+using CheckoutKata.Models;
 using CheckoutKata.Services;
 
 namespace CheckoutKata.Tests
@@ -6,20 +7,40 @@ namespace CheckoutKata.Tests
     public class CheckoutTests
     {
         private readonly IPricingRuleProvider _pricingRuleProvider;
+        private readonly List<PricingRule> _defaultPricingRules;
         public CheckoutTests() 
         {
-            _pricingRuleProvider = new PricingRuleProvider();
+            _defaultPricingRules = new List<PricingRule>
+            {
+                new PricingRule("A", 50, 3, 130),
+                new PricingRule("B", 30, 2, 45),
+                new PricingRule("C", 20),
+                new PricingRule("D", 15)
+            };
+            _pricingRuleProvider = new PricingRuleProvider(_defaultPricingRules);
         }
         [Fact]
         public void Scan_ShouldReturnCorrectPrice()
         {
             var checkout = new Checkout(_pricingRuleProvider);
-
             checkout.Scan("A");
 
             //Assert
             var total = checkout.GetTotalPrice();
             Assert.Equal(50, total);
+        }
+        [Fact]
+        public void AddPricingRule_ShouldReturnTotalPrice()
+        {
+            _defaultPricingRules.Add(new PricingRule("E", 40, 4, 120));
+
+            var checkout = new Checkout(_pricingRuleProvider);
+            checkout.Scan("AABAABCDE");
+
+            //Assert
+            var total = checkout.GetTotalPrice();
+            Assert.Equal(300, total);
+
         }
         [Fact]
         public void GetTotalPrice_NoItems_ShouldReturnZero()

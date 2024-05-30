@@ -1,6 +1,7 @@
 ﻿
 using CheckoutKata.Interfaces;
 using CheckoutKata.Models;
+using CheckoutKata.Services;
 
 namespace CheckoutKata
 {
@@ -8,9 +9,25 @@ namespace CheckoutKata
     {
         private readonly Dictionary<string, PricingRule> _pricingRules;
         private readonly Dictionary<string, int> _items;
-        public Checkout(IPricingRuleProvider pricingRules) 
+        public Checkout(IPricingRuleProvider pricingRuleProvider) 
         {
-            _pricingRules = pricingRules.GetPricingRules().ToDictionary(rule => rule.SKU!);
+            try
+            {
+                if(pricingRuleProvider != null)
+                {
+                    _pricingRules = pricingRuleProvider.GetPricingRules().ToDictionary(rule => rule.SKU);
+                }
+                else
+                {
+                    throw new ArgumentNullException(nameof(pricingRuleProvider));
+                }
+               
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException("Failed to initialize pricing rules.", ex);
+            }
+
             _items = new Dictionary<string, int>();
         }
 
@@ -72,27 +89,30 @@ namespace CheckoutKata
 
                 foreach (var item in _items)
                 {
-                    var pricingRule = _pricingRules[item.Key];
-                    int itemCount = item.Value;
-
-                    if (pricingRule.SpecialQuantity.HasValue && pricingRule.SpecialPrice.HasValue)
-                    {
-                        int specialCount = itemCount / pricingRule.SpecialQuantity.Value;
-                        int regularCount = itemCount % pricingRule.SpecialQuantity.Value;
-                        totalPrice += specialCount * pricingRule.SpecialPrice.Value + regularCount * pricingRule.UnitPrice;
-                    }
-                    else
-                    {
-                        totalPrice += itemCount * pricingRule.UnitPrice;
-                    }
+                    totalPrice += CalculateItemPrice(item.Key, item.Value);
                 }
 
                 return totalPrice;
             }
             catch (Exception ex)
             {
-                // Log or handle exception as needed
                 throw new InvalidOperationException("Failed to calculate total price.", ex);
+            }
+        }
+
+        private int CalculateItemPrice(string sku, int quantity)
+        {
+            var pricingRule = _pricingRules[sku];
+
+            if (pricingRule.SpecialQuantity.HasValue && pricingRule.SpecialPrice.HasValue)
+            {
+                int specialCount = quantity / pricingRule.SpecialQuantity.Value;
+                int regularCount = quantity % pricingRule.SpecialQuantity.Value;
+                return specialCount * pricingRule.SpecialPrice.Value + regularCount * pricingRule.UnitPrice;
+            }
+            else
+            {
+                return quantity * pricingRule.UnitPrice;
             }
         }
     }
