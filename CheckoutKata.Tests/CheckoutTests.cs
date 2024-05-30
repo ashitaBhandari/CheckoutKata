@@ -20,5 +20,20 @@ namespace CheckoutKata.Tests
 
             Assert.Equal(100, total);
         }
+
+        [Fact]
+        public void Scan_MultipleItemsWithSpecialPrice_ShouldReturnCorrectTotalPrice()
+        {
+            var checkout = new Checkout(_pricingRuleProvider);
+
+            checkout.Scan("A");
+            checkout.Scan("A");
+            checkout.Scan("A");
+            checkout.Scan("B");
+            checkout.Scan("B");
+            var total = checkout.GetTotalPrice();
+
+            Assert.Equal(100, total); // 3A = 130, 2B = 45
+        }
     }
 }
